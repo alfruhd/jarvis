@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Jarvis Core Hologram</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: transparent;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-app-region: drag; /* Allows dragging the floating ring around your screen */
+            user-select: none;
+        }
+        @keyframes spin-slow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin-reverse { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
+        @keyframes reactor-pulse { 0%, 100% { filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.6)); transform: scale(0.98); } 50% { filter: drop-shadow(0 0 35px rgba(0, 240, 255, 0.95)); transform: scale(1.02); } }
+        .animate-spin-slow { animation: spin-slow 25s linear infinite; }
+        .animate-spin-reverse { animation: spin-reverse 20s linear infinite; }
+        .animate-reactor { animation: reactor-pulse 3.5s ease-in-out infinite; }
+        #core-reactor {
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="core-reactor" title="Click to Activate | Double-Click or Right-Click to Deactivate" class="relative w-40 h-40 flex items-center justify-center animate-reactor cursor-grab active:cursor-grabbing">
+        <svg class="absolute inset-0 w-full h-full animate-spin-slow text-cyan-400/40" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="10 5 2 5"/>
+        </svg>
+        <svg class="absolute inset-0 w-full h-full animate-spin-reverse text-cyan-300/70" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="20 10 5 10"/>
+        </svg>
+        <div class="absolute inset-6 rounded-full border-2 border-cyan-300/50 flex items-center justify-center bg-cyan-950/40 backdrop-blur">
+            <div class="w-12 h-12 rounded-full bg-cyan-400 shadow-[0_0_25px_#00f0ff] animate-pulse flex items-center justify-center">
+                <div class="w-5 h-5 rounded-full bg-white shadow-[0_0_15px_#fff]"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function setActive(active) {
+            const el = document.getElementById('core-reactor');
+            if (!el) return;
+            if (active) {
+                el.style.opacity = '1.0';
+                el.style.transform = 'scale(1.0)';
+            } else {
+                el.style.opacity = '0.45';
+                el.style.transform = 'scale(0.85)';
+            }
+        }
+
+        let clickTimeout = null;
+        const reactor = document.getElementById('core-reactor');
+
+        // Click to Activate
+        reactor.addEventListener('click', (e) => {
+            if (clickTimeout) clearTimeout(clickTimeout);
+            clickTimeout = setTimeout(() => {
+                if (window.pywebview && window.pywebview.api) {
+                    window.pywebview.api.on_click();
+                }
+            }, 250);
+        });
+
+        // Double-click to Deactivate
+        reactor.addEventListener('dblclick', (e) => {
+            if (clickTimeout) clearTimeout(clickTimeout);
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.on_deactivate();
+            }
+        });
+
+        // Right-click to Deactivate
+        reactor.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.on_deactivate();
+            }
+        });
+    </script>
+</body>
+</html>

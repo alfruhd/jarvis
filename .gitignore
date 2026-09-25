@@ -1,0 +1,29 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Logs
+logs/
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Biometric & Voice Data / Temporary Cache
+data/*.npy
+*.npy
+~/.jarvis_voice_cache/
+~/.jarvis_memory/
+
+# IPC & Pipes
+/tmp/jarvis_pipe
+
+# Environment & Credentials
+.env
+*.env

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. // Cinematic Holographic OS MK-V</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        hud: {
+                            base: '#020617',
+                            surface: 'rgba(2, 13, 30, 0.75)',
+                            border: 'rgba(0, 240, 255, 0.25)',
+                            borderGlow: 'rgba(0, 240, 255, 0.6)',
+                            cyan: '#00f0ff',
+                            electric: '#0077ff',
+                            amber: '#ffaa00',
+                            alert: '#ff0055'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"Share Tech Mono"', 'monospace'],
+                        orbitron: ['"Orbitron"', 'sans-serif'],
+                        sans: ['"Inter"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #010409;
+            color: #00f0ff;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(0, 119, 255, 0.05) 0%, transparent 80%),
+                linear-gradient(to right, rgba(0, 240, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 240, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 32px 32px, 32px 32px;
+        }
+
+        .hud-panel {
+            background: linear-gradient(135deg, rgba(3, 18, 38, 0.85) 0%, rgba(2, 10, 22, 0.95) 100%);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.07), inset 0 0 15px rgba(0, 240, 255, 0.03);
+            position: relative;
+        }
+
+        .hud-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 10px; height: 10px;
+            border-top: 2px solid #00f0ff;
+            border-left: 2px solid #00f0ff;
+        }
+
+        .hud-panel::after {
+            content: '';
+            position: absolute;
+            bottom: 0; right: 0; width: 10px; height: 10px;
+            border-bottom: 2px solid #00f0ff;
+            border-right: 2px solid #00f0ff;
+        }
+
+        .glow-cyan {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.8), 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+
+        .glow-box {
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.35);
+        }
+
+        /* Scanline Overlay */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.6;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(1, 8, 18, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 240, 255, 0.4);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 240, 255, 0.7);
+        }
+
+        /* Arc Reactor Animations */
+        @keyframes spin-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes spin-reverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+        @keyframes reactor-pulse {
+            0%, 100% { filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.6)); transform: scale(0.98); }
+            50% { filter: drop-shadow(0 0 35px rgba(0, 240, 255, 0.95)); transform: scale(1.02); }
+        }
+
+        .animate-spin-slow {
+            animation: spin-slow 25s linear infinite;
+        }
+        .animate-spin-reverse {
+            animation: spin-reverse 20s linear infinite;
+        }
+        .animate-reactor {
+            animation: reactor-pulse 3.5s ease-in-out infinite;
+        }
+
+        /* Audio Waveform Bars */
+        @keyframes wave {
+            0%, 100% { height: 8px; }
+            50% { height: 36px; }
+        }
+        .wave-bar {
+            animation: wave 1.2s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-3 md:p-6 relative select-none">
+
+    <div class="scanlines"></div>
+
+    <!-- HEADER -->
+    <header class="w-full max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between pb-4 border-b border-cyan-500/30 mb-4 z-20">
+        <div class="flex items-center space-x-4 mb-3 md:mb-0">
+            <div class="relative flex items-center justify-center">
+                <div class="w-4 h-4 rounded-full bg-cyan-400 animate-ping absolute"></div>
+                <div class="w-3 h-3 rounded-full bg-cyan-300 relative z-10 glow-box"></div>
+            </div>
+            <div>
+                <h1 class="text-xl md:text-2xl font-black tracking-widest text-cyan-300 glow-cyan font-['Orbitron']">
+                    J.A.R.V.I.S. <span class="text-xs text-cyan-400/80 font-normal">MK-V HUD</span>
+                </h1>
+                <p class="text-[10px] text-cyan-500/80 tracking-wider font-mono">LOCAL NEURAL AGENT // OLLAMA (QWEN-2.5)</p>
+            </div>
+        </div>
+
+        <!-- TOP STATUS & CONTROLS -->
+        <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
+            <div class="flex items-center space-x-2 hud-panel px-3 py-1.5 rounded text-cyan-300">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>SUBROUTINES: ACTIVE</span>
+            </div>
+            <div id="local-clock" class="hud-panel px-3 py-1.5 rounded text-cyan-200">
+                00:00:00 EAT
+            </div>
+            <button onclick="toggleAudioSynthesis()" id="audio-toggle-btn" class="hud-panel hover:bg-cyan-950/60 px-3 py-1.5 rounded text-cyan-300 transition flex items-center space-x-1.5 border border-cyan-500/40">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
+                <span>VOICE SYNTHESIS: ON</span>
+            </button>
+            <button onclick="toggleFullscreen()" class="hud-panel hover:bg-cyan-950/60 p-2 rounded text-cyan-300 transition border border-cyan-500/40" title="Toggle Fullscreen">
+                <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN HUD GRID -->
+    <main class="w-full max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-5 flex-grow z-10 mb-4">
+        
+        <!-- LEFT COLUMN: SYSTEM TELEMETRY & SUBROUTINES -->
+        <section class="lg:col-span-3 flex flex-col space-y-5">
+            
+            <!-- Telemetry Card -->
+            <div class="hud-panel p-4 rounded-lg flex flex-col space-y-4">
+                <div class="text-xs font-bold text-cyan-300 uppercase tracking-widest border-b border-cyan-500/20 pb-2 flex justify-between items-center font-['Orbitron']">
+                    <span>Telemetry</span>
+                    <span class="text-[10px] text-cyan-400 animate-pulse">LIVE SYNC</span>
+                </div>
+
+                <!-- CPU Core Load -->
+                <div class="space-y-1.5 font-mono">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-cyan-400/80">CPU LOAD (M2)</span>
+                        <span id="telemetry-cpu" class="text-cyan-300 font-bold">--</span>
+                    </div>
+                    <div class="w-full bg-slate-950/80 h-2 rounded overflow-hidden border border-cyan-500/30">
+                        <div id="cpu-bar" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-500 glow-box" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- RAM Allocation -->
+                <div class="space-y-1.5 font-mono">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-cyan-400/80">SYSTEM RAM</span>
+                        <span id="telemetry-ram" class="text-cyan-300 font-bold">--</span>
+                    </div>
+                    <div class="w-full bg-slate-950/80 h-2 rounded overflow-hidden border border-cyan-500/30">
+                        <div id="ram-bar" class="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-500 glow-box" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-cyan-500/20 flex items-center justify-between text-xs font-mono">
+                    <span class="text-cyan-400/70">OLLAMA DAEMON</span>
+                    <span class="text-emerald-400 font-bold px-2 py-0.5 bg-emerald-950/60 rounded border border-emerald-500/40">ONLINE</span>
+                </div>
+            </div>
+
+            <!-- Quick Directives -->
+            <div class="hud-panel p-4 rounded-lg flex flex-col space-y-3">
+                <div class="text-xs font-bold text-cyan-300 uppercase tracking-widest border-b border-cyan-500/20 pb-2 font-['Orbitron']">
+                    Directives
+                </div>
+                <button onclick="sendDirective('Scan my home directory for active Git repositories')" class="w-full text-left text-xs bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 hover:border-cyan-400 p-2.5 rounded transition text-cyan-200 flex items-center justify-between group font-mono">
+                    <span class="flex items-center space-x-2"><i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-cyan-400"></i><span>Scan Git Repositories</span></span>
+                    <span class="text-cyan-400 opacity-0 group-hover:opacity-100 transition">▶</span>
+                </button>
+                <button onclick="sendDirective('Check my active python version and disk space')" class="w-full text-left text-xs bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 hover:border-cyan-400 p-2.5 rounded transition text-cyan-200 flex items-center justify-between group font-mono">
+                    <span class="flex items-center space-x-2"><i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i><span>Run Diagnostics</span></span>
+                    <span class="text-cyan-400 opacity-0 group-hover:opacity-100 transition">▶</span>
+                </button>
+                <button onclick="sendDirective('Read my ~/.zshrc configuration file')" class="w-full text-left text-xs bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 hover:border-cyan-400 p-2.5 rounded transition text-cyan-200 flex items-center justify-between group font-mono">
+                    <span class="flex items-center space-x-2"><i data-lucide="file-text" class="w-3.5 h-3.5 text-cyan-400"></i><span>Inspect .zshrc Config</span></span>
+                    <span class="text-cyan-400 opacity-0 group-hover:opacity-100 transition">▶</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- CENTER COLUMN: ARC REACTOR & CHAT TERMINAL -->
+        <section class="lg:col-span-6 flex flex-col space-y-5">
+            
+            <!-- Cinematic Arc Reactor Hologram -->
+            <div class="hud-panel p-5 rounded-lg flex flex-col items-center justify-center relative min-h-[190px] overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/10 via-transparent to-transparent pointer-events-none"></div>
+                
+                <!-- Multi-ring Reactor -->
+                <div class="relative w-32 h-32 flex items-center justify-center animate-reactor">
+                    <svg class="absolute inset-0 w-full h-full animate-spin-slow text-cyan-500/40" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="10 5 2 5"/>
+                    </svg>
+                    <svg class="absolute inset-0 w-full h-full animate-spin-reverse text-cyan-400/70" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="36" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="20 10 5 10"/>
+                    </svg>
+                    <div class="absolute inset-6 rounded-full border-2 border-cyan-300/50 flex items-center justify-center bg-cyan-950/40 backdrop-blur">
+                        <div id="reactor-core" class="w-10 h-10 rounded-full bg-cyan-400 glow-box animate-pulse flex items-center justify-center shadow-[0_0_20px_#00f0ff]">
+                            <div class="w-4 h-4 rounded-full bg-white shadow-[0_0_10px_#fff]"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex flex-col items-center z-10">
+                    <div id="jarvis-status" class="text-xs tracking-widest text-cyan-300 uppercase font-['Orbitron']">
+                        Awaiting Neural Directive...
+                    </div>
+                    <div id="audio-waveform" class="flex items-center space-x-1 mt-2 h-8">
+                        <div class="w-1 bg-cyan-400/40 rounded wave-bar" style="animation-delay: 0.1s;"></div>
+                        <div class="w-1 bg-cyan-400/60 rounded wave-bar" style="animation-delay: 0.3s;"></div>
+                        <div class="w-1 bg-cyan-400 rounded wave-bar" style="animation-delay: 0.2s;"></div>
+                        <div class="w-1 bg-cyan-400/80 rounded wave-bar" style="animation-delay: 0.5s;"></div>
+                        <div class="w-1 bg-cyan-400/50 rounded wave-bar" style="animation-delay: 0.4s;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Neural Chat Terminal -->
+            <div class="hud-panel rounded-lg flex flex-col flex-grow h-[380px] md:h-[410px]">
+                <div class="bg-cyan-950/50 px-4 py-2.5 border-b border-cyan-500/30 text-xs font-bold text-cyan-300 flex items-center justify-between font-['Orbitron']">
+                    <span class="flex items-center space-x-2"><i data-lucide="terminal" class="w-3.5 h-3.5 text-cyan-400"></i><span>NEURAL COMMAND TERMINAL</span></span>
+                    <div class="flex space-x-1.5">
+                        <span class="w-2 h-2 rounded-full bg-cyan-500/40 inline-block"></span>
+                        <span class="w-2 h-2 rounded-full bg-cyan-400/60 inline-block"></span>
+                        <span class="w-2 h-2 rounded-full bg-cyan-300 inline-block"></span>
+                    </div>
+                </div>
+
+                <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-3.5 text-sm font-sans">
+                    <div class="text-cyan-400/80 text-xs font-mono bg-cyan-950/30 p-2.5 rounded border border-cyan-500/20 flex items-start space-x-2">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-cyan-400 mt-0.5 shrink-0"></i>
+                        <span>[SYS_INIT]: J.A.R.V.I.S. neural interface active. Local Ollama Qwen-2.5 runtime secured. Ready for directives.</span>
+                    </div>
+                </div>
+
+                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="p-3 bg-cyan-950/40 border-t border-cyan-500/30 flex items-center space-x-2.5">
+                    <input type="text" id="user-input" placeholder="Issue directive to J.A.R.V.I.S. (e.g. 'List my directory')..." class="flex-grow bg-slate-950/60 border border-cyan-500/30 rounded px-3.5 py-2 text-cyan-100 placeholder-cyan-700/70 focus:outline-none focus:border-cyan-400 text-sm font-mono">
+                    
+                    <button type="button" id="mic-btn" onclick="toggleVoiceInput()" class="bg-cyan-950/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 px-3 py-2 rounded transition shadow-[0_0_10px_rgba(0,240,255,0.2)] flex items-center space-x-1.5 font-['Orbitron'] text-xs uppercase" title="Tap to Speak Directive">
+                        <i data-lucide="mic" id="mic-icon" class="w-4 h-4"></i>
+                        <span id="mic-label" class="hidden sm:inline">Voice</span>
+                    </button>
+
+                    <button type="submit" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-5 py-2 rounded transition text-xs tracking-wider uppercase font-['Orbitron'] shadow-[0_0_15px_rgba(0,240,255,0.5)] flex items-center space-x-1.5">
+                        <span>Execute</span>
+                        <i data-lucide="send" class="w-3 h-3"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: TOOL EXECUTION LOG FEED -->
+        <section class="lg:col-span-3 flex flex-col space-y-5">
+            <div class="hud-panel p-4 rounded-lg flex flex-col flex-grow h-[545px]">
+                <div class="text-xs font-bold text-cyan-300 uppercase tracking-widest border-b border-cyan-500/20 pb-2 flex justify-between items-center font-['Orbitron']">
+                    <span class="flex items-center space-x-1.5"><i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i><span>Execution Log</span></span>
+                    <button onclick="clearLogs()" class="text-[10px] text-cyan-400 hover:text-cyan-200 underline font-mono">CLEAR</button>
+                </div>
+                
+                <div id="tool-logs" class="flex-grow mt-3 overflow-y-auto space-y-2.5 text-xs font-mono text-cyan-300 pr-1">
+                    <div class="p-2.5 rounded bg-cyan-950/40 border border-cyan-500/20">
+                        <span class="text-cyan-500">[00:00:01]</span> ReAct tool dispatcher loaded. Awaiting subroutines.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="w-full max-w-[1600px] mx-auto pt-3 border-t border-cyan-500/30 text-center text-xs text-cyan-500/60 font-mono z-10 flex flex-col sm:flex-row items-center justify-between">
+        <span>J.A.R.V.I.S. PERSONAL DESKTOP INTELLIGENCE OS</span>
+        <span>SECURE LOCAL ENCRYPTION // DAR ES SALAAM, TZ</span>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+
+        // 1. Live Local Timezone Clock (Africa/Dar_es_Salaam)
+        function updateLocalClock() {
+            const now = new Date();
+            const options = { 
+                timeZone: 'Africa/Dar_es_Salaam', 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit', 
+                hour12: false 
+            };
+            const timeString = new Intl.DateTimeFormat('en-GB', options).format(now);
+            const clockEl = document.getElementById('local-clock');
+            if (clockEl) {
+                clockEl.innerText = `${timeString} EAT`;
+            }
+        }
+        setInterval(updateLocalClock, 1000);
+        updateLocalClock();
+
+        // 2. Real-Time Telemetry Polling from FastAPI Backend
+        async function updateTelemetry() {
+            try {
+                const res = await fetch('/api/telemetry');
+                const data = await res.json();
+                
+                const cpuEl = document.getElementById('telemetry-cpu');
+                const cpuBar = document.getElementById('cpu-bar');
+                if (cpuEl) cpuEl.innerText = `${data.cpu.toFixed(1)}%`;
+                if (cpuBar) cpuBar.style.width = `${data.cpu}%`;
+
+                const ramEl = document.getElementById('telemetry-ram');
+                const ramBar = document.getElementById('ram-bar');
+                if (ramEl) ramEl.innerText = `${data.ram}%`;
+                if (ramBar) ramBar.style.width = `${data.ram}%`;
+            } catch (err) {
+                console.error("Telemetry fetch error:", err);
+            }
+        }
+        setInterval(updateTelemetry, 2500);
+        updateTelemetry();
+
+        // 3. Real-Time Audit Logs Polling from FastAPI Backend
+        let lastSeenLogIndex = 0;
+        async function updateLogs() {
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                if (Array.isArray(logs) && logs.length > lastSeenLogIndex) {
+                    const newLogs = logs.slice(lastSeenLogIndex);
+                    newLogs.forEach(entry => {
+                        appendAuditEntry(entry);
+                    });
+                    lastSeenLogIndex = logs.length;
+                }
+            } catch (err) {
+                console.error("Logs fetch error:", err);
+            }
+        }
+        setInterval(updateLogs, 2000);
+        updateLogs();
+
+        function appendAuditEntry(entry) {
+            const logsContainer = document.getElementById('tool-logs');
+            const div = document.createElement('div');
+            const isErr = entry.status === 'ERROR' || entry.status === 'SECURITY_BLOCK';
+            const statusColor = isErr ? 'text-red-400' : 'text-emerald-400';
+            const borderGlow = isErr ? 'border-red-500/30 bg-red-950/20' : 'border-cyan-500/20 bg-cyan-950/40';
+
+            div.className = `p-2.5 rounded ${borderGlow} text-[11px] mb-2`;
+            div.innerHTML = `
+                <div class="flex justify-between text-cyan-300 font-bold">
+                    <span class="flex items-center space-x-1">
+                        <i data-lucide="zap" class="w-3 h-3 ${isErr ? 'text-red-400' : 'text-cyan-400'}"></i>
+                        <span>${escapeHtml(entry.tool)}</span>
+                    </span>
+                    <span class="text-[10px] ${statusColor}">${escapeHtml(entry.status)}</span>
+                </div>
+                <div class="text-cyan-400/80 mt-1 break-words font-mono text-[10px]">${escapeHtml(entry.details)}</div>
+                <div class="text-cyan-600 text-[10px] mt-1">${escapeHtml(entry.timestamp)}</div>
+            `;
+            logsContainer.appendChild(div);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+            lucide.createIcons();
+        }
+
+        function appendMessage(sender, text) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            
+            if (sender === 'You') {
+                div.className = 'flex flex-col items-end space-y-1';
+                div.innerHTML = `
+                    <div class="text-[10px] text-cyan-400 font-mono">YOU // DIRECTIVE</div>
+                    <div class="bg-cyan-950/70 border border-cyan-500/40 text-cyan-100 p-3 rounded-xl max-w-[85%] text-sm font-sans">${escapeHtml(text)}</div>
+                `;
+            } else {
+                div.className = 'flex flex-col items-start space-y-1';
+                div.innerHTML = `
+                    <div class="text-[10px] text-cyan-300 font-mono">J.A.R.V.I.S. // RESPONSE</div>
+                    <div class="bg-cyan-950/45 border border-cyan-500/30 text-cyan-200 p-3 rounded-xl max-w-[85%] text-sm font-sans shadow-[0_0_15px_rgba(0,240,255,0.05)]">${escapeHtml(text)}</div>
+                `;
+            }
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendLog(logText) {
+            const logs = document.getElementById('tool-logs');
+            const time = new Date().toTimeString().split(' ')[0];
+            const div = document.createElement('div');
+            div.className = 'p-2.5 rounded bg-cyan-950/40 border border-cyan-500/20 text-[11px]';
+            div.innerHTML = `
+                <div class="flex justify-between text-cyan-300 font-bold">
+                    <span class="flex items-center space-x-1"><i data-lucide="zap" class="w-3 h-3 text-cyan-400"></i><span>Tool Execution</span></span>
+                    <span class="text-[10px] text-emerald-400">SUCCESS</span>
+                </div>
+                <div class="text-cyan-400/70 mt-1 truncate">${escapeHtml(logText)}</div>
+                <div class="text-cyan-600 text-[10px] mt-1">${time}</div>
+            `;
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+            lucide.createIcons();
+        }
+
+        function clearLogs() {
+            document.getElementById('tool-logs').innerHTML = '<div class="p-2.5 rounded bg-cyan-950/30 border border-cyan-500/20 text-xs text-cyan-500">[SYS]: Logs cleared.</div>';
+        }
+
+        function handleChatSubmit(event) {
+            event.preventDefault();
+            const input = document.getElementById('user-input');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            input.value = '';
+            appendMessage('You', prompt);
+            sendToBackend(prompt);
+        }
+
+        function sendDirective(prompt) {
+            appendMessage('You', prompt);
+            sendToBackend(prompt);
+        }
+
+        async function sendToBackend(prompt) {
+            const statusText = document.getElementById('jarvis-status');
+            const core = document.getElementById('reactor-core');
+            statusText.innerText = "Processing local neural reasoning...";
+            core.classList.remove('bg-cyan-400');
+            core.classList.add('bg-blue-600', 'animate-ping');
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+                const data = await response.json();
+                
+                if (data.tool_logs) {
+                    data.tool_logs.forEach(log => appendLog(log));
+                }
+
+                appendMessage('Jarvis', data.response);
+
+                // Speak response out loud using natural human neural voice
+                speakResponse(data.response);
+            } catch (err) {
+                appendMessage('Jarvis', 'Error communicating with local Python server.');
+            } finally {
+                statusText.innerText = "Awaiting Neural Directive...";
+                core.classList.remove('bg-blue-600', 'animate-ping');
+                core.classList.add('bg-cyan-400');
+            }
+        }
+
+        let audioSynthesisActive = true;
+        function toggleAudioSynthesis() {
+            audioSynthesisActive = !audioSynthesisActive;
+            const btn = document.getElementById('audio-toggle-btn');
+            if (audioSynthesisActive) {
+                btn.innerHTML = `<i data-lucide="volume-2" class="w-3.5 h-3.5"></i><span>VOICE SYNTHESIS: ON</span>`;
+            } else {
+                btn.innerHTML = `<i data-lucide="volume-x" class="w-3.5 h-3.5"></i><span>VOICE SYNTHESIS: OFF</span>`;
+            }
+            lucide.createIcons();
+        }
+
+        function speakResponse(text) {
+            if (!audioSynthesisActive || !text) return;
+            // High-definition human neural voice via backend
+            fetch('/api/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            }).catch(() => {
+                // Browser Web Speech fallback with natural voice
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    const voices = window.speechSynthesis.getVoices();
+                    const femaleVoice = voices.find(v => v.name.toLowerCase().includes('ava') || v.name.toLowerCase().includes('samantha') || v.name.toLowerCase().includes('karen')) ||
+                                        voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
+                    if (femaleVoice) utterance.voice = femaleVoice;
+                    window.speechSynthesis.speak(utterance);
+                }
+            });
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // ==========================================
+        // 4. In-Dashboard Voice Recognition (Web Speech API)
+        // ==========================================
+        let recognition = null;
+        let isRecording = false;
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                console.warn("Web Speech API not supported in this browser.");
+                return false;
+            }
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                isRecording = true;
+                updateMicUI(true);
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+                fetch('/api/stop_speaking', { method: 'POST' }).catch(() => {});
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0].transcript)
+                    .join('');
+                document.getElementById('user-input').value = transcript;
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                updateMicUI(false);
+                const inputVal = document.getElementById('user-input').value.trim();
+                if (inputVal) {
+                    appendMessage('You', inputVal);
+                    sendToBackend(inputVal);
+                    document.getElementById('user-input').value = '';
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error:", event.error);
+                isRecording = false;
+                updateMicUI(false);
+            };
+            return true;
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                const supported = initSpeechRecognition();
+                if (!supported) {
+                    alert("Voice input requires a Chromium browser (like Google Chrome) with microphone permissions enabled.");
+                    return;
+                }
+            }
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+                fetch('/api/stop_speaking', { method: 'POST' }).catch(() => {});
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error("Recognition start error:", e);
+                }
+            }
+        }
+
+        function updateMicUI(recording) {
+            const btn = document.getElementById('mic-btn');
+            const icon = document.getElementById('mic-icon');
+            const label = document.getElementById('mic-label');
+            const input = document.getElementById('user-input');
+            const core = document.getElementById('reactor-core');
+
+            if (recording) {
+                btn.className = "bg-red-950/80 border border-red-500 text-red-400 px-3 py-2 rounded transition shadow-[0_0_20px_rgba(255,0,85,0.7)] animate-pulse flex items-center space-x-1.5 font-['Orbitron'] text-xs uppercase";
+                if (label) label.innerText = "Listening...";
+                input.placeholder = "Listening to your voice...";
+                if (core) {
+                    core.classList.remove('bg-cyan-400');
+                    core.classList.add('bg-red-500', 'animate-ping');
+                }
+            } else {
+                btn.className = "bg-cyan-950/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-400 hover:text-cyan-200 px-3 py-2 rounded transition shadow-[0_0_10px_rgba(0,240,255,0.2)] flex items-center space-x-1.5 font-['Orbitron'] text-xs uppercase";
+                if (label) label.innerText = "Voice";
+                input.placeholder = "Issue directive to J.A.R.V.I.S. (e.g. 'List my directory')...";
+                if (core) {
+                    core.classList.remove('bg-red-500', 'animate-ping');
+                    core.classList.add('bg-cyan-400');
+                }
+            }
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
